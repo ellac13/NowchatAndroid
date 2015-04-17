@@ -6,6 +6,7 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -42,32 +43,26 @@ public class ChatActivity extends ActionBarActivity {
                     @Override
                     public void run() {
                         try {
+                            //Find text editor
+                            EditText et = ((EditText) findViewById(R.id.editText));
+
+                            //Get text from editbox
+                            String fromUser = et.getText().toString();
+                            Log.d("OnSendClick", "Client: " + fromUser);
 
 
-                            String fromServer, fromUser;
 
-                            while ((fromServer = in.readLine()) != null) {
-                                Log.d("SocketThread", "Server: " + fromServer);
-                                //System.out.println("Server: " + fromServer);
-                                if (fromServer.equals("Bye."))
-                                    break;
-
-                                //fromUser = (new BufferedReader(new InputStreamReader(System.in))).readLine();
-                                fromUser = "hej från klienten!";
-                                if (fromUser != null) {
-                                    Log.d("SocketThread", "Client: " + fromUser);
-                                    final String message = fromUser;
-                                    findViewById(R.id.textView).post(new Runnable() {
-                                        @Override
-                                        public void run() {
-                                            ((TextView) findViewById(R.id.textView)).setText(message);
-                                            addChatItem(message);
-                                        }
-                                    });
-                                    //System.out.println("Client: " + fromUser);
-                                    out.println(fromUser);
-                                }
+                            //System.out.println("Client: " + fromUser);
+                            if(fromUser != null){
+                                out.println(fromUser);
+                                Log.d("OnSendClick", "Message sent");
+                                //Empty text editor
+                                et.setText("");
+                            }else{
+                                Log.d("OnSendClick", "No message");
                             }
+
+
                         }
                         catch(Exception e){
                             Log.e("SocketException", "in onClickListener for sendButton", e);
@@ -77,7 +72,10 @@ public class ChatActivity extends ActionBarActivity {
 
             }
         });
+
+        //new Thread(new ServerListenerThread()).start();
     }
+
 
 
     @Override
@@ -103,6 +101,10 @@ public class ChatActivity extends ActionBarActivity {
         return super.onOptionsItemSelected(item);
     }
 
+    /**
+     * Add text to the chat
+     * @param text
+     */
     private void addChatItem(String text){
         try{
             LinearLayout linearLayout = (LinearLayout) findViewById(R.id.chat_item_list);
@@ -123,10 +125,9 @@ public class ChatActivity extends ActionBarActivity {
     }
 
 
-
-
-
-
+    /**
+     * Initiates the socket and the input- and outputstreams
+     */
     private class SocketThread implements Runnable{
 
         //Internet address to connect to
@@ -143,12 +144,61 @@ public class ChatActivity extends ActionBarActivity {
                 out = new PrintWriter(kkSocket.getOutputStream(), true);
                 in = new BufferedReader(
                         new InputStreamReader(kkSocket.getInputStream()));
-                Log.d("SocketThread", "Socket started");
+                Log.d("SocketThread", "Socket started, launching listener");
+
+                new Thread(new ServerListenerThread()).start();
 
             }
             catch(Exception e){
                 e.printStackTrace();
             }
+        }
+    }
+
+    /**
+     * Listens to the socketinputstream for messages, when a message is received updates the chatview with message
+     */
+    private class ServerListenerThread implements Runnable{
+
+        @Override
+        public void run() {
+            try {
+                String fromServer;
+
+                //Listen to server
+                while ((fromServer = in.readLine()) != null) {
+                    Log.d("ChatUpdaterThread", "Server: " + fromServer);
+                    //System.out.println("Server: " + fromServer);
+
+                    //If non empty message, update chat
+                    if (fromServer != null) {
+
+                        //Update chat
+                        findViewById(R.id.textView).post(new ChatUpdaterThread(fromServer));
+                    }
+                }
+            }
+            catch (Exception e){
+                e.printStackTrace();
+            }
+        }
+    }
+
+    /**
+     * Updates the chat with a new chatitem
+     */
+    private class ChatUpdaterThread implements Runnable{
+
+        private String message;
+
+        public ChatUpdaterThread(String message){
+            this.message=message;
+        }
+
+        @Override
+        public void run() {
+            ((TextView) findViewById(R.id.textView)).setText(message);
+            addChatItem(message);
         }
     }
 }
