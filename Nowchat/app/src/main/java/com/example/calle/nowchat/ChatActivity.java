@@ -3,11 +3,13 @@ package com.example.calle.nowchat;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
 
 import java.io.BufferedReader;
@@ -53,11 +55,17 @@ public class ChatActivity extends ActionBarActivity {
 
 
                             //System.out.println("Client: " + fromUser);
-                            if(fromUser != null){
+
+                            //Don't send empty messages
+                            if(fromUser != null && !fromUser.equals("")){
+
+                                //Send message to server
                                 out.println(fromUser);
                                 Log.d("OnSendClick", "Message sent");
-                                //Empty text editor
-                                et.setText("");
+
+                                //Empty text editor and add message to chat
+                                runOnUiThread(new AddOwnMessageThread(fromUser));
+
                             }else{
                                 Log.d("OnSendClick", "No message");
                             }
@@ -114,9 +122,39 @@ public class ChatActivity extends ActionBarActivity {
             textView1.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT));
             textView1.setText(text);
-            textView1.setBackgroundColor(0xff66ff66); // hex color 0xAARRGGBB
+            textView1.setBackgroundColor(0xfffc8ba0); // hex color 0xAARRGGBB
             textView1.setPadding(20, 20, 20, 20);// in pixels (left, top, right, bottom)
             linearLayout.addView(textView1);
+
+            //Autoscroll to the bottom when new message added
+            ((ScrollView) findViewById(R.id.scrollView)).fullScroll(View.FOCUS_DOWN);
+        }
+        catch (Exception e){
+            e.printStackTrace();
+        }
+
+    }
+
+    /**
+     * Add text to the chat
+     * @param text
+     */
+    private void addOwnChatItem(String text){
+        try{
+            LinearLayout linearLayout = (LinearLayout) findViewById(R.id.chat_item_list);
+
+            // Add textview 1
+            TextView textView1 = new TextView(this);
+            textView1.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT));
+            textView1.setText(text);
+            textView1.setBackgroundColor(0xff66ff66); // hex color 0xAARRGGBB
+            textView1.setPadding(20, 20, 20, 20);// in pixels (left, top, right, bottom)
+            textView1.setGravity(Gravity.RIGHT);//TODO Make it actually go to the right, does not work
+            linearLayout.addView(textView1);
+
+            //Autoscroll to the bottom when new message added
+            ((ScrollView) findViewById(R.id.scrollView)).fullScroll(View.FOCUS_DOWN);
         }
         catch (Exception e){
             e.printStackTrace();
@@ -199,6 +237,27 @@ public class ChatActivity extends ActionBarActivity {
         public void run() {
             ((TextView) findViewById(R.id.textView)).setText(message);
             addChatItem(message);
+        }
+    }
+
+
+    private class AddOwnMessageThread implements Runnable{
+
+        private String message;
+
+        public AddOwnMessageThread(String message){
+            this.message=message;
+
+        }
+        @Override
+        public void run() {
+
+            //Add it to the chat
+            addOwnChatItem(message);
+
+            EditText et = ((EditText) findViewById(R.id.editText));
+            et.setText("");
+            et.setHint(R.string.chat_text_hint);
         }
     }
 }
